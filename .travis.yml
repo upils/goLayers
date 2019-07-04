@@ -1,0 +1,17 @@
+dist: xenial
+
+language: go
+
+go:
+  - 1.12.x
+
+before_script:
+  - CGO_ENABLED=0 go build
+
+deploy:
+  provider: releases
+  api_key: $GH_TOKEN
+  file: "golayers/golayers"
+  skip_cleanup: true
+  on:
+    tags: true
