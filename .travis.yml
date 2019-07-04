@@ -6,12 +6,12 @@ go:
   - 1.12.x
 
 before_script:
-  - CGO_ENABLED=0 go build
+  - CGO_ENABLED=0 go build -o goLayers
 
 deploy:
   provider: releases
   api_key: $GH_TOKEN
-  file: "golayers/golayers"
+  file: "goLayers"
   skip_cleanup: true
   on:
     tags: true
