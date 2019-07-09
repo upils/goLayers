@@ -5,19 +5,38 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
+	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/namespaces"
 )
 
 var layerMap map[string][]string
 
-func main() {
-	cli, err := client.NewEnvClient()
+
+func displayNamespaces (client *containerd.Client) error {
+	nsStore := client.NamespaceService()
+	labels, err := nsStore.List(context.Background())
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	images, err := cli.ImageList(context.Background(), types.ImageListOptions{})
+	for _, label := range labels {
+		fmt.Printf("%s\n", label)
+	}
+	return nil
+}
+
+func main() {
+	client, err := containerd.New("/run/containerd/containerd.sock")
+	if err != nil {
+			panic(err)
+	}
+	defer client.Close()
+
+	displayNamespaces(client)
+
+	ctx := namespaces.WithNamespace(context.Background(), "moby")
+
+	images, err := client.ListImages(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -25,12 +44,15 @@ func main() {
 	layerMap = make(map[string][]string)
 
 	for _, image := range images {
-		imageInspect, _, err := cli.ImageInspectWithRaw(context.Background(), image.ID)
+		layers, err := image.RootFS(ctx)
+		
 		if err != nil {
 			panic(err)
 		}
-		for _, layer := range imageInspect.RootFS.Layers {
-			layerMap[layer] = append(layerMap[layer], strings.Join(image.RepoTags , ", "))
+		for _, layer := range layers {
+			var layerString = layer.String()
+			fmt.Printf(layerString)
+			layerMap[layerString] = append(layerMap[layerString], image.Name())
 		}
 	}
 
